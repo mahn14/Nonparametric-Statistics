@@ -1,5 +1,5 @@
 # Nonparametric-Statistics
-Classwork and Assignments from STAT 3504 at Virginia Tech
+Assignments from STAT 3504 at Virginia Tech
 
 This repo contains code given by the professor Dr. Gramacy (http://bobby.gramacy.com/). Many of the statistical methods implemented as a function were presented in class, with minor changes for completing homeworks. Examples of class code, the raw homework questions, and exams can be found on his website.
 
