@@ -1,0 +1,188 @@
+---
+  title: "Homework 8"
+author: "Michael Ahn"
+date: "December 10, 2017"
+output:
+  html_document:
+  -smart
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Meter Bias
+```{r}
+pH <- c(7.07, 7.00, 7.10, 6.97, 7.00, 7.03, 7.01, 7.01, 6.98, 7.08)
+```
+
+### a.) By Hand
+H0: E{pH} = 7
+H1: E{pH} != 7
+```{r}
+d <- pH - 7
+d <- d[d != 0]
+n <- length(d)
+r <- rank(abs(d))
+sr <- r* sign(d)
+z.cc <- (sum(sr)+1)/sqrt(sum(sr^2))
+pnorm(z.cc)
+```
+
+### b.) Software Library
+```{r}
+wilcox.test(pH, rep(7,length(pH)), alternative="two.sided", paired=TRUE, exact=FALSE)
+```
+With a p-value of 0.1604 we can not reject the null hypothesis under a 0.05 significance level and conclude that the meter is not bias.
+
+
+
+## Problem 2: Agent Orange
+```{r}
+veteran <- data.frame(
+    plasma=c(2.5, 3.1, 2.1, 3.5, 7.2, 1.8, 6.0, 3.0, 36.0, 4.7, 6.9, 
+        3.3, 4.6, 1.6, 7.3, 1.8, 20.0, 2.0, 2.5, 2.3),
+    fattissue=c(4.9, 5.9, 4.4, 6.9, 4.0, 4.2, 10.0, 5.5, 41.0, 4.4, 
+        7.0, 2.9, 4.6, 1.4, 7.7, 1.1, 11.0, 2.5, 2.3, 2.5))
+```
+
+### a.) By Hand
+```{r}
+d <- veteran$fattissue - veteran$plasma
+d #contain zeros
+d <- d[d != 0]
+n <- length(d)
+r <- rank(abs(d))
+r #there are ties
+sr <- r*sign(d)
+sr #use CLT approx
+z.cc <- (sum(sr)-1)/sqrt(sum(sr^2))
+z.cc
+pnorm(z.cc, lower.tail=FALSE)
+```
+With a p-value of 0.08240749 we can not reject the null hypothesis under a 0.05 significance level and conclude that there is not enough evidence to say that fattissue is higher than the plasma level.
+
+### b.) Software Library
+```{r}
+wilcox.test(veteran$fattissue, veteran$plasma, paired=TRUE, alternative="greater", exact=FALSE)
+```
+With a p-value of 0.08240749 we come to the same conclusion: cannot reject the null hypothesis under 5% significance level, and conclude that there is not enough evidence to say fattissue is higher than plasma
+
+
+
+## Problem 3: DUI
+```{r}
+dui <- data.frame(before=c(0.65, 0.59, 0.78, 0.67, 0.65, 0.76, 0.61, 0.86, 0.74, 0.88),
+    after=c(0.72, 0.60, 0.78, 0.66, 0.68, 0.77, 0.72, 0.86, 0.72, 0.97))
+```
+
+### a.) Construct plots summarizing data
+```{r}
+plot(dui$before, main="red:before, green:after", col="red", ylab="reaction times", xlab="person#")
+points(dui$after, col="green")
+```
+
+### b.) Numerical Summaries
+```{r}
+summary(dui$before)
+summary(dui$after)
+```
+BEFORE- range=[0.59, 0.88], med=0.705, mean=7.19  
+AFTER- range=[0.6,0.97], med=0.72, mean=0.748  
+
+### c.) Suspect
+I suspect, given each of the quartiles and means, that the reaction speed for after drinking is higher (worse) than for before drinking. We can see this in the plot, too, where almost all of the "before" points have lower reaction times than "after".  
+### d.) Perform Test
+H0: E{D} <= 0 (u_after - u_before)  
+H1: E{D} > 0  
+```{r}
+d <- dui$after - dui$before
+d <- d[d != 0] #there are zeros
+n <- length(d)
+r <- rank(abs(d)) #there are ties
+sr <- r*sign(d) #use CLT approx
+z.cc <- (sum(sr)-1)/sqrt(sum(sr^2))
+z.cc
+pnorm(z.cc, lower.tail=FALSE)
+```
+Test Statistic: 1.618274  
+P-Value: 0.0528014  
+With the given p-value under a 5% significance level, we cannot reject the null hypothesis and conclude that there is not enough evidence to say that reaction time is higher after drinking  
+
+
+
+## Problem 4: Machine Assembly
+
+### a.) Which Test and Why
+I would use the Friedman Test because each of the blocks, the operators, are achieve results independent of the other operators. Also, there are 6 blocks but only 4 treatments, the machines so the Friedman and Quade should work about the same.  
+
+### b.) By Hand
+```{r}
+data <- cbind(c(42.6, 39.3, 39.6, 39.9, 42.9, 43.6),
+              c(39.8, 40.1, 40.5, 42.3, 42.5, 43.1),
+              c(40.2, 40.5, 41.3, 43.4, 44.9, 45.1),
+              c(41.3, 42.2, 43.5, 44.2, 45.9, 42.3))
+colnames(data) <- c("M1", "M2", "M3", "M4")
+rownames(data) <- 1:6
+
+Rtab <- t(apply(data, 1, rank))
+Rtab
+R <- colSums(Rtab)
+b <- 6
+k <- 4
+T1 <- (12/(b*k*(k+1)))*sum((R - b*(k+1)/2)^2)
+pchisq(T1, k-1, lower.tail=FALSE)
+```
+With a p-value of 0.07855, we can not reject the null hypothesis under a 5% significance level, and conclude that the machines are pretty much the same.  
+
+### c.) Software Library
+```{r}
+friedman.test(data, k-1, lower.tail=FALSE)
+```
+Same results. With p-value of 0.07855, under 5% significance level, we cannot reject the null hypothesis and conclude that the machines are pretty much the same.  
+
+
+
+## Problem 5: Course Difficulty
+```{r}
+course <- cbind(c(68, 83, 72, 55, 92),
+                c(73, 91, 77, 77, 75),
+                c(61, 86, 66, 66, 87))
+colnames(course) <- c("Math", "French", "Biology")
+rownames(course) <- 1:5
+```
+
+### a.) Which Test and Why
+I would use the Quade Test because there are only 3 treatments being considered.  
+
+### b.) By Hand
+```{r}
+b <- 5
+k <- 3
+Rtab <- t(apply(course, 1, rank))
+R <- colSums(Rtab)
+Delta <- apply(course, 1, range)
+Delta <- Delta[2,] - Delta[1,]
+Delta
+Q <- rank(Delta)
+Q
+Stab <- Q * (Rtab - (k+1)/2)
+Stab
+S <- colSums(Stab)
+A2 <- sum(Stab^2)
+B <- sum(S^2)/b
+T3 <- (b-1)*B/(A2-B)
+c(A2, B, T3)
+pf(T3, k-1, (b-1)*(k-1), lower.tail=FALSE)
+```
+With a p-value of 0.5423969, we cannot reject the null hypothesis under a 5% significance and conclude that the the subjects are of equal difficulty.  
+
+### c.) Software Library
+```{r}
+quade.test(course)
+```
+Again with a p-value of 0.5424 under a 5% significance we cannot reject the null hypothesis and conclude that the subjects are of equal difficulty.  
+
+
+
+

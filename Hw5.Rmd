@@ -1,0 +1,270 @@
+---
+title: "Homework 5"
+output:
+  pdf_document: default
+latex_engine: xelatex
+author: "Michael Ahn"
+date: "November 5, 2017"
+
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Summer Temperatures
+```{r}
+desmoines <- c(83, 91, 94, 89, 89, 96, 91, 92, 90)
+spokane <- c(78, 82, 81, 77, 79, 81, 80, 81)
+```
+
+### a.) By Hand
+H0: the distributions are the same with equal means
+H1: they are different
+```{r}
+nx <- length(desmoines)
+ny <- length(spokane)
+r <- rank(c(desmoines, spokane))
+r
+rx <- r[seq_along(desmoines)]
+rx
+t <- sum(rx)
+
+ties <- length(r) - length(unique(r))
+ties # ties
+
+N <- nx + ny
+r2sum <- sum(r^2)
+t1 <- t - nx*(N+1)/2
+t1 <- t1/sqrt(nx*ny/((N*(N-1)))*r2sum - nx*ny*(N+1)^2/(4*(N-1)))
+t1 # test statistic
+2*min(pnorm(t1), pnorm(t1, lower.tail=FALSE))
+```
+combined rank: 9.0 13.5 16.0 10.5 10.5 17.0 13.5 15.0 12.0  2.0  8.0  6.0  1.0  3.0 6.0  4.0  6.0  
+xrank:  9.0 13.5 16.0 10.5 10.5 17.0 13.5 15.0 12.0  
+ties: 4  
+t statistic is ~3.4769  
+With a p-value of ~0.000507, we reject the null hypothesis under a 0.05 significance and conclude that they are different  
+
+### b.) Software Library
+```{r}
+wilcox.test(desmoines, spokane, exact = FALSE, correct = FALSE)
+```
+With a p-value of ~0.000507, we reject the null hypothesis and conclude that they are different, same conclusion as by hand
+
+
+
+## Problem 2: Room Temperature
+```{r}
+men <- c(74, 72, 77, 76, 76, 73, 75, 73, 74, 75)
+women <- c(75, 77, 78, 79, 77, 73, 78, 79, 78, 80)
+```
+
+### a.) By Hand
+H0: Fmen(x) = Fwomen(x) for all x  
+H1: Fmen(x) != Fwomen(x) for some x  
+    Basically, the null hypothesis states that men and women have same comfort level
+```{r}
+nx <- length(men)
+ny <- length(women)
+r <- rank(c(men, women))
+r
+rx <- r[seq_along(men)]
+rx
+t <- sum(rx)
+
+ties <- length(r) - length(unique(r))
+ties # ties
+
+N <- nx + ny
+r2sum <- sum(r^2)
+t1 <- t - nx*(N+1)/2
+t1 <- t1/sqrt(nx*ny/((N*(N-1)))*r2sum - nx*ny*(N+1)^2/(4*(N-1)))
+t1 # test statistic
+2*min(pnorm(t1), pnorm(t1, lower.tail=FALSE))
+```
+combined rank: 5.5  1.0 13.0 10.5 10.5  3.0  8.0  3.0  5.5  8.0  8.0 13.0 16.0 18.5 13.0  3.0 16.0 18.5 16.0 20.0  
+xrank: 5.5  1.0 13.0 10.5 10.5  3.0  8.0  3.0  5.5  8.0  
+ties: 11  
+We have t1 = -2.817132  
+With a p-value of ~0.0048 we reject the null hypothesis under a 0.05 significance and conclude that there is a difference between men and women.  
+
+
+### b.) Software Library
+```{r}
+wilcox.test(men, women, exact = FALSE, correct = FALSE)
+```
+We have the same results, rejecting the null hypothesis and concluding that the comfort level for men and women are different
+
+
+
+## Problem 3: Material Science
+```{r}
+H <- c(1.2, 0.9, 0.7, 1.0, 1.7, 1.7, 1.1, 0.9, 1.7, 1.9, 1.3, 2.1, 1.6, 1.8, 1.4, 1.3, 1.9, 1.6,
+    0.8, 2.0, 1.7, 1.6, 2.3, 2.0)
+P <- c(1.6, 1.5, 1.1, 2.1, 1.5, 1.3, 1.0, 2.6)
+```
+
+### a.) Numerical Summaries: mean, median, sd
+```{r}
+summary(H)
+summary(P)
+```
+Summary order: H then P  
+shows min, max, 1st/3rd quartile, median, mean  
+
+
+### b.) Helpful Plot
+```{r}
+boxplot(H, P, ylab = "Extensibility (%)", xlab = "Fabric Quality", names = c("High", "Poor"))
+```
+The boxplots alongside one another look very similar, although the min and max are somewhat farther away from another than the other quartiles. Generally appear to look equal  
+
+### c.) Software Library
+H0: the two samples are from same distribution  
+H1: the two samples are from same distribution  
+  Basically, H0 states there is no difference between high/poor quality  
+```{r}
+wilcox.test(H, P, exact = FALSE, correct = FALSE)
+```
+t statistic = 96  
+With a p-value of 1 we fail to reject the null hypothesis and conclude that there is no difference between the high and poor quality fabrics 
+
+
+## Problem 4: Light Bulbs
+```{r}
+bulbs <- list(
+    A=c(73, 64, 67, 62, 70), 
+    B=c(84, 80, 81, 77),
+    C=c(82, 79, 71, 75))
+```
+
+### a.) By Hand
+H0: the bulbs all have the same life span  
+H1: at least one of them have longer life spans than at least one of the others  
+```{r}
+n <- sapply(bulbs, length)
+N <- sum(n)
+r <- rank(unlist(bulbs))
+
+k <- length(bulbs)
+g <- factor(rep.int(seq_len(k), n))
+rs <- tapply(r, g, sum)
+rs
+s2 <- (sum(r^2) - N*(N+1)^2/4)/(N-1)
+t <- (sum(rs^2/n) - N*(N+1)^2/4)/s2
+t
+
+
+pchisq(t, k-1, lower.tail=FALSE)
+
+```
+Use the t statistic ~8.4 
+With a p-value of ~0.0149 we reject the null hypothesis with a 0.05 significance level, concluding that there is at least one type of bulb with longer life than the others  
+
+### b.) Software Library
+```{r}
+kruskal.test(bulbs)
+```
+With a p-value of ~0.01497 we reject the null hypothesis with a 0.05 significance level, concluding that there is at least one type of bulb with longer life than the others 
+
+
+
+## Problem 5: Job Training
+```{r}
+program.rank <- list(
+    one=c(4, 6, 7, 2, 10),
+    two=c(1, 8, 12, 3, 11),
+    three=c(20, 19, 16, 14, 5),
+    four=c(18, 15, 17, 13, 9))
+```
+H0: the training programs are all equally effective
+H1: at least one of the training programs is more effective than the others  
+
+```{r}
+n <- sapply(program.rank, length)
+N <- sum(n)
+r <- rank(unlist(program.rank))
+
+k <- length(program.rank)
+g <- factor(rep.int(seq_len(k), n))
+rs <- tapply(r, g, sum)
+rs
+s2 <- (sum(r^2) - N*(N+1)^2/4)/(N-1)
+t <- (sum(rs^2/n) - N*(N+1)^2/4)/s2
+t
+
+
+pchisq(t, k-1, lower.tail=FALSE)
+
+```
+t statistic = 9.72  
+with a p-value of ~0.0211 we reject the null hypothesis under the 0.05 significance level and conclude that there is at least one training program that yields more effective results than the others  
+
+
+
+## Problem 6: Iron Diets
+```{r}
+diet <- list(
+    A=c(2.23, 1.14, 2.63, 1.00, 1.35, 2.01, 1.64, 1.13, 1.01, 1.70), 
+    B=c(5.59, 0.96, 6.96, 1.23, 1.61, 2.94, 1.96, 3.68, 1.54, 2.59),
+    C=c(4.50, 3.92, 10.33, 8.23, 2.07, 4.90, 6.98, 6.42, 3.72, 6.00),
+    D=c(1.35, 2.06, 0.74, 0.96, 1.16, 2.08, 0.69, 0.68, 0.84, 1.34),
+    E=c(1.40, 2.51, 2.49, 1.74, 1.59, 1.36, 3.00, 4.81, 5.21, 5.12))
+```
+
+### a.) Numerical Summaries
+```{r}
+A=c(2.23, 1.14, 2.63, 1.00, 1.35, 2.01, 1.64, 1.13, 1.01, 1.70); 
+B=c(5.59, 0.96, 6.96, 1.23, 1.61, 2.94, 1.96, 3.68, 1.54, 2.59);
+C=c(4.50, 3.92, 10.33, 8.23, 2.07, 4.90, 6.98, 6.42, 3.72, 6.00);
+D=c(1.35, 2.06, 0.74, 0.96, 1.16, 2.08, 0.69, 0.68, 0.84, 1.34);
+E=c(1.40, 2.51, 2.49, 1.74, 1.59, 1.36, 3.00, 4.81, 5.21, 5.12);
+summaryA = summary(A)
+summaryB = summary(B)
+summaryC = summary(C)
+summaryD = summary(D)
+summaryE = summary(E)
+summaryA; summaryB; summaryC; summaryD; summaryE
+```
+Provided in order of A, B, C, D, E  
+
+
+### b.) Helpful Plots
+```{r}
+boxplot(A, B, C, D, E, names = c("A","B","C","D","E"), xlab = "diets", ylab = "iron present" )
+```
+Diets B and E seems to be the most similar, with A and D also having similar structures.  
+
+
+### c.) Software Library
+H0: all of the diets end up with identical iron  
+H1: at least one of the diets end up with more iron than the rest  
+```{r}
+kruskal.test(diet)
+```
+With t statistic of 26.672 giving p-value of ~2.315e-05 we reject the null hypothesis and conclude that at least one of the diets give more iron than the others  
+
+H0: diets B and E end up with identical iron  
+H1: diets B and E do not have identical iron  
+```{r}
+wilcox.test(B,E, exact = FALSE)
+```
+test statistic: 48  
+With p-value of ~0.9097 we fail to reject the null hypothesis and conclude that diets B and E are identical in the amount of iron present afterwards  
+
+H0: diets A and D are identical for iron  
+H1: diets A and D are not identical for iron  
+```{r}
+wilcox.test(A,D,exact =FALSE)
+```
+test statistic: 71.5  
+With a p-value of ~0.112 we fail to reject the null hypothesis and conclude that diets A and D are identical in the amount of iron present afterwards  
+
+
+
+
+
+
+
+

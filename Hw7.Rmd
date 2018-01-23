@@ -1,0 +1,269 @@
+---
+  title: "Homework 7"
+author: "Michael Ahn"
+date: "December 4, 2017"
+output:
+  html_document:
+  -smart
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Couples' Bowling
+```{r}
+bowling <- data.frame(husband=c(147, 158, 131, 142, 183, 151, 196, 129, 155, 158),
+    wife=c(122, 128, 125, 123, 115, 120, 108, 143, 124, 123))
+```
+
+### a.) Compute Kendall's Tau "by hand"
+```{r}
+o <- order(bowling$husband)
+n <- nrow(bowling)
+yo <- bowling$wife[o]
+concord <- discord <- rep(NA, n)
+for(i in 1:(n-1)) {
+    yties <- sum(yo[i] == yo[(i+1):n])
+    concord[i] <- sum(yo[i] < yo[(i+1):n]) + yties/2
+    discord[i] <- sum(yo[i] > yo[(i+1):n]) + yties/2
+}
+cbind(bowling[o, ], concord, discord)
+Nc <- sum(concord, na.rm=TRUE)
+Nd <- sum(discord, na.rm=TRUE)
+tau <- (Nc - Nd) / (Nc + Nd)
+tau
+```
+tau = -0.533333
+
+### b.) Two Tailed Test by Hand
+```{r}
+library(SuppDists)
+n <- nrow(bowling)
+2*min(pKendall(tau, n), 1-pKendall(tau, n))
+
+z1 <- (Nc - Nd + 1) * sqrt(18)/sqrt(n*(n-1)*(2*n+5))
+z2 <- (Nc - Nd - 1) * sqrt(18)/sqrt(n*(n-1)*(2*n+5))
+2 * min(pnorm(z1), pnorm(z2, lower.tail=FALSE))
+```
+With a p-value of ~0.04662257, we reject the null hypothesis at the 0.05 significance level and conclude that there is a relationship between the scores  
+Using normal approx given ties in ranking, we get p-value of 0.03966867 which leads to the same conclusion  
+
+### c.) Calculate a, b using Software Library
+```{r}
+cor(bowling$husband, bowling$wife, method="kendall")
+cor.test(bowling$husband, bowling$wife, alternative="two.sided", method="kendal")
+```
+tau = -0.5227273, so very close to hand calculations  
+p-value of 0.03811 is much closer to normal approx method, leads to same conclusion of rejecting null hypothesis at the 0.05 significance level. Conclude that there is a relationship between husband and wife scores  
+
+
+
+## Problem 2: Defective Bolts
+```{r}
+bolts <- data.frame(day=1:13, def=c(6.1, 7.5, 7.7, 5.9, 5.2, 6.1, 5.3, 4.5, 4.9, 4.6, 3.0, 4.0, 3.7))
+```
+
+### a.) Numerical Summary of Data
+```{r}
+summary(bolts)
+```
+mean: 5.269,median: 5.200, s.d.: 1.38473  
+min: 3, 1st quart: 4.5, 3rd quart: 6.1, max: 7.7  
+
+### b.) Helpful Plot
+```{r}
+library(ggplot2)
+ggplot(bolts, aes(x=day, y=def)) + geom_point()
+```
+We can see a clear trend in the data judging arbitrarily, seeing that the data points are generally moving with a linearly negative slope  
+
+### c.) Spearman's Rho
+H0: day and def are mutually independent  
+H1: large values of day are associated with smaller values of def, or vice versa  
+```{r}
+cor.test(bolts$day, bolts$def, alternative="less", method="spearman")
+```
+With a p-value of 1.05e-05 we reject the null hypothesis and conclude that there is a negative correlation between the day and def using spearman's rho  
+
+### d.) Kendall's Tau
+H0: day and def are mutually independent  
+H1: day and def pairs tend to be discordant (negative slope)  
+```{r}
+cor.test(bolts$day, bolts$def, alternative="less", method="kendall")
+```
+With a p-value of 0.00247 we reject the null hypothesis and conclude that the day and def pairs tends to be discordant using Kendall's Tau as was estimated using the plot  
+
+
+
+## Problem 3: Miles Per Gallon
+```{r}
+mpg <- data.frame(miles=c(142, 116, 194, 250, 88, 157, 225, 159, 43, 208),
+    gallons=c(11.1, 5.7, 14.2, 15.8, 7.5, 12.5, 17.9, 8.8, 3.4, 15.2))
+```
+
+### a.) Draw Diagram
+```{r}
+ggplot(mpg, aes(x=gallons, y=miles)) + geom_point()
+```
+
+### b.) Estimate Linear Model: Least Squares  
+#### i.) By Hand
+```{r}
+x <- mpg$gallons
+y <- mpg$miles
+b <- cor(x,y)*sd(y)/sd(x)
+a <- mean(y) - b*mean(x)
+a
+b
+```
+b, slope = 12.61741  
+a, intercept = 16.75887  
+#### ii.) Software Library
+```{r}
+fit <- lm(miles ~ gallons, data = mpg)
+a <- as.numeric(coef(fit)[1])
+b <- as.numeric(coef(fit)[2])
+c(intercept=a, slope = b)
+```
+b, slope = 12.61741  
+a, intercept = 16.75887  
+We arrive at the same conclusions using software library
+
+### c.) Plot the LS Regression
+```{r}
+plot(x, y, main = "MPG", xlab="gallons", ylab="miles")
+abline(fit)
+#legend("topright", c("LS Line"), lty = 1)
+```
+
+### d.) Testing Slope mpg = 18
+#### i.) By Hand
+```{r}
+beta <- 18
+u <- y - beta*x
+
+n <- length(x)
+rx <- rank(x)
+ru <- rank(u)
+numer <- sum(rx*ru) - n*((n+1)/2)^2
+denomx <- sqrt(sum(rx^2) - n*((n+1)/2)^2)
+denomy <- sqrt(sum(ru^2) - n*((n+1)/2)^2)
+rho <- numer/(denomx*denomy)
+
+2*min(pSpearman(rho,n), 1-pSpearman(rho,n))
+```
+With a p-value of ~0.02675 we reject the null hypothesis and conclude that the slope is not 18  
+#### ii.) Software Library
+```{r}
+cor.test(x, u, method="spearman")
+```
+With a p-value of ~0.02751 we reject the null hypothesis and conclude that the slope is not 18  
+
+### e.) 95% CI for the Slope
+```{r}
+S <- outer(y,y,'-')/outer(x,x,'-')
+S <- as.numeric(S[upper.tri(S)])
+S <- sort(S)
+N <- length(S)
+w <- qKendall(0.975, n)*length(S)  ## the extra multiplication is to put it back on the T=Nc-Nd scale
+r <- floor(0.5*(N-w))
+s <- ceiling(N+1-r)
+c(S[r], S[s])
+```
+Our 95% CI is from 8.934426 to 16.693548 which makes sense since our estimated slope was ~12 and we rejected 18 under a 95% significance  
+
+### f.) Estimate for Slope
+```{r}
+b1 <- median(S)
+b1
+```
+Our estimated slope using median is 13.17308  
+
+
+
+## Problem 4: Student to Faculty Ratio
+```{r}
+univ <- data.frame(name=c("American International", "Bethany Nazarene", "Carlow", "David Lipscomb", 
+    "Florida International", "Heidelberg", "Lake Erie", "Mary Harin Baylor", "Newburry", "St. Ambrose", 
+    "Smith", "Texas Women's", "Wofford"),
+    students=c(2546, 1355, 87, 1858, 4500, 1141, 784, 1063, 753, 1189, 2755, 5602, 988),
+    faculty=c(129, 75, 87, 99, 300, 109, 77, 64, 61, 90, 240, 300, 73))
+```
+
+### a.) Draw Diagram
+```{r}
+ggplot(univ, aes(x=faculty, y=students)) + geom_point()
+```
+
+### b.) Estimate LS Regression model params
+#### i.) By Hand
+```{r}
+x <- univ$faculty
+y <- univ$students
+b <- cor(x,y)*sd(y)/sd(x)
+a <- mean(y) - b*mean(x)
+a
+b
+```
+b, slope = 16.8282  
+a, intercept = -311.8655  
+#### ii.) Software Library
+```{r}
+fit <- lm(students ~ faculty, data=univ)
+a <- as.numeric(coef(fit)[1])
+b <- as.numeric(coef(fit)[2])
+c(intercept=a, slope=b)
+```
+b, slope = 16.8282  
+a, intercept = -311.8655  
+Same as before when done by hand  
+
+### c.) Plot the LS Regression
+```{r}
+plot(x, y, main="university populations", xlab="faculty", ylab="students")
+abline(fit)
+```
+
+### d.) Testing Slope Increase Ratio of 15
+#### i.) By Hand
+```{r}
+beta <- 15
+u <- y - beta*x
+n <- length(x)
+rx <- rank(x)
+ru <- rank(u)
+numer <- sum(rx*ru) - n*((n+1)/2)^2
+denomx <- sqrt(sum(rx^2) - n*((n+1)/2)^2)
+denomy <- sqrt(sum(ru^2) - n*((n+1)/2)^2)
+rho <- numer/(denomx*denomy)
+2*min(pSpearman(rho, n), 1-pSpearman(rho, n))
+```
+With a p-value of 0.5422524 we cannot reject the null hypothesis under a 0.05 significance level and conclude that for every increase in faculty, there are 15 more students  
+#### ii.) Software Library
+```{r}
+cor.test(x, u, method="spearman")
+```
+With a p-value of 0.5345, we cannot reject the null hypothesis under a 0.05 significance level and conclude that for every increase in faculty there an accompanying 15 increase in students  
+
+### e.) 95% CI for Slope
+```{r}
+S <- outer(y,y,'-')/outer(x,x,'-')
+S <- as.numeric(S[upper.tri(S)])
+S <- sort(S)
+N <- length(S)
+w <- qKendall(0.975, n)*length(S)  ## the extra multiplication is to put it back on the T=Nc-Nd scale
+r <- floor(0.5*(N-w))
+s <- ceiling(N+1-r)
+c(S[r], S[s])
+```
+Our 95% CI is from 9.484848 to 23.356021  
+
+### f.) Estimate of Slope using Median
+```{r}
+median(S)
+```
+Our estimated slope using median is 17.05079  
+
+
+

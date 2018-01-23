@@ -1,0 +1,196 @@
+---
+title: "Homework 3"
+author: "Michael Ahn"
+date: "October 6, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Problem 1: Weight Loss
+
+```{r}
+#Is the diet an effective means for losing weight given data:
+weights <- data.frame(
+    name=c("Abdul", "Ed", "Jim", "Max", "Phil", "Ray"),
+    before=c(174, 191, 188, 182, 201, 188),
+    after=c(165, 186, 183, 178, 203, 181))
+```
+
+### a.) By Hand
+  H0: before <= after  
+  H1: before > after  
+```{r}
+pstar <- 1/2
+t <- sum(weights$before > weights$after)
+n <- sum(weights$before != weights$after)
+phi <- pbinom(t, n, pstar, lower.tail = FALSE)
+phi
+```
+  With a p-value of 0.0156, we reject the null hypothesis using a significance level of 0.05 and conclude that the diet is indeed effective
+  
+### b.) Software Library
+```{r}
+phi <- binom.test(t, n, pstar, alternative = "greater")
+phi
+```
+  With a p-value of 0.1094, we reject the null hypothesis using a significance level of 0.05 and conclude that the diet is indeed effective
+  
+  
+## Problem 2: Concrete
+
+```{r}
+
+t <- 77 #where concrete A is stronger
+n <- 100
+pstar <- 1/2
+n*pstar
+```
+t is above the null mean so we use two-tailed test  
+H0: P(+) = P(-)  
+H1: P(+) != P(-)  
+
+### a.) By Hand
+```{r}
+lhs <- seq(0, floor(pstar*n))
+tL <- sum(dbinom(lhs, n, pstar) <= dbinom(t, n, pstar)) 
+phi1 <- pbinom(tL - 1, n, pstar) + pbinom(t - 1, n, pstar, lower.tail=FALSE)
+phi2 <- 2 * pbinom(t-1, n, pstar, lower.tail=FALSE)
+phi1
+phi2
+```
+  With a p- value of ~5.5e-08 we reject the null hypothesis and conclude that the additives have a significant difference
+  
+  
+### b.) Software Library
+```{r}
+binom.test(t, n, 1/2)
+```
+  With a p-value of ~5.5e-08 we reject the null hypothesis and conclude that the additives have a significant difference
+
+
+## Problem 3: Foreign Policy
+```{r}
+ct <- rbind(c(7, 24), c(30, 74))
+```
+H0: no change,
+H1: significant change
+
+### a.) By Hand
+```{r}
+a <- ct[1,1]
+b <- ct[1,2]
+c <- ct[2,1]
+d <- ct[2,2]
+
+n <- b + c # 54 > 20, can use chisquare
+
+t1 <- (b-c)^2 / (b + c)
+phi <- pchisq(t1, 1, lower.tail = FALSE)
+phi
+```
+  With a p-value of 0.4142162 we cannot reject the null hypothesis and conclude that there is no significance of change
+
+
+### b.) Software Library
+```{r}
+mcnemar.test(matrix(c(7, 24, 30, 74), nrow = 2), correct = FALSE)
+```
+  Again, with a p-value of 0.4143 we cannot reject the null hypothesis and conclude that there is no significance of change
+
+## Problem 4: Automobile Fatality
+
+```{r}
+#auto fatality per 100,000 people for past 15 years
+mortality <- c(17.3, 17.9, 18.4, 18.1, 18.3, 19.6, 18.6, 19.2, 17.7, 20.0, 19.0, 18.8, 19.3, 20.2, 19.9)
+```
+  Is there an increasing trend? Where + indicates an increase
+  H0: P(+) <= 1/2
+  H1: P(+) > 1/2
+
+### a.) By Hand
+```{r}
+X <- mortality[1:7]
+Y <- mortality[9:15] #skip median value
+
+t <- sum(X < Y)
+n <- sum(X != Y)
+c(t,n)
+
+```
+  Using an upper tail test:
+```{r}
+pbinom(t-1, n, 1/2, lower.tail = FALSE)
+```
+  With a p-value of ~0.0078 we reject the null hypothesis and conclude that there is an increasing trend for mortality rates per capita
+  
+### b.) Software Library
+```{r}
+library(randtests)
+cox.stuart.test(mortality, alternative = "right.sided")
+```
+  Again,  With a p-value of ~0.0078 we reject the null hypothesis and conclude that there is an increasing trend for mortality rates per capita
+
+
+## Problem 5: Toothpaste
+
+  Performing 2-Tailed Test for significant differences between the populations
+  H0: men = women
+  H1: men != women
+```{r}
+O <- cbind(c(68, 64), c(32, 36))
+```
+
+### a.) By Hand
+```{r}
+n <- rowSums(O)
+N <- sum(n)
+C <- colSums(O)
+
+t1 <- sqrt(N) * (O[1,1]*O[2,2] - O[1,2]*O[2,1]) / sqrt(n[1]*n[2]*C[1]*C[2])
+
+phi <- 2 * pnorm(-abs(t1))
+phi
+```
+  With a p-value of 0.55, we cannot reject the null hypothesis and conclude that there is no difference between the preferences of men vs women in      their like and dislike of this toothpaste
+
+### b.) Software Library
+```{r}
+prop.test(O, correct=FALSE)
+```
+  Same conclusion: with a p-value of 0.55, we conclude that there is no singnificant difference between men and women
+  
+  
+## Problem 6: Flowers
+
+```{r}
+rbind(c(5,3), c(5, 7))
+  #Gardenia vs Tulips
+  #Venue A vs B
+```
+
+### a.) By Hand
+```{r}
+N <- 20
+r <- 8
+c <- 10
+t2 <- x <- 5
+lhs <- seq(0, floor(c*r/N))
+eps <- sqrt(.Machine$double.eps) ## numerical wiggle room
+tL <- sum(dhyper(lhs, r, N-r, c) <= dhyper(t2, r, N-r, c) * (1 + eps))  
+phyper(tL - 1, r, N-r, c) + phyper(t2 - 1, r, N-r, c, lower.tail=FALSE)
+
+```
+  With p-value of ~0.6499 we can not reject the null hypothesis and conclude that there is no significant difference under a significance level of      0.05
+
+### b.) Software Library
+```{r}
+fisher.test( rbind(c(5,3), c(5, 7)) )
+```
+  With p-value of ~0.6499 we can not reject the null hypothesis and conclude that there is no significant difference under a significance level of      0.05
+

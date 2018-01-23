@@ -1,0 +1,326 @@
+---
+  title: "Homework 4"
+author: "Michael Ahn"
+date: "October 20, 2017"
+output:
+  html_document: default
+pdf_document: default
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Grading Policies  
+
+
+### a.) Which test are you using?  
+Pearson's Chi-Squared Test  
+
+
+### b.) By hand  
+```{r}
+O <- rbind(
+  c(12, 45, 49, 6, 13, 18, 2),
+  c(10, 32, 43, 18, 4, 12, 6),
+  c(15, 19, 32, 20, 6, 9, 7))
+
+n<- rowSums(O)
+C <- colSums(O)
+N <- sum(n)
+
+E <- outer(n, C/N)
+E
+
+t <- sum((O - E)^2/E)
+t
+
+df <- (length(n) - 1) * (length(C) - 1)
+df
+
+pchisq(t, df, lower.tail = FALSE)
+````
+With a p-value of ~0.004 we reject the null hypothesis at the 5% level, and conclude that there are significant differences in the grading policies between professors
+
+
+### c.) Software Library
+```{r}
+chisq.test(O)
+```
+With a p-value of ~0.004, we reject the null hypothsis at the 5% level, and conclude that there are significant differences in the grading policies between professors
+
+
+
+## Problem 2: Religious Preferences
+
+
+### a.) Which test are you using?
+Chi-Squared Test for Independence
+
+
+### b.) By Hand
+```{r} 
+O <- rbind(
+  c(3, 1, 1, 4),
+  c(1, 2, 0, 1),
+  c(3, 3, 3, 1),
+  c(2, 1, 1, 3))
+
+R <- rowSums(O)
+C <- colSums(O)
+N <- sum(R)
+
+E <- outer(R, C/N)
+E
+
+t <- sum((O - E)^2/E)
+t
+
+df <- (length(R) - 1) * (length(C) - 1)
+df
+
+pchisq(t, df, lower.tail = FALSE)
+```
+With a p-value of ~0.6781851 we can not reject the null hypothesis with a 5% significance level, and conclude that there is no difference across colleges for different religions. The observations are independent of the rows and columns variables
+
+
+### c.) Software Library
+```{r}
+chisq.test(O)
+```
+With a p-value of ~0.6781851 we can not reject the null hypothesis with a 5% significance level, and conclude that there is no difference across colleges for different religions.
+
+
+
+## Problem 3: Compression Strength
+
+
+### a.) By Hand
+```{r}
+box <- list(
+  box1 = c(655.5, 788.3, 734.3, 721.4),
+  box2 = c(789.2, 772.5, 786.9, 686.1),
+  box3 = c(737.1, 539.0, 696.3, 671.7),
+  box4 = c(535.1, 628.7, 542.4, 559.9))
+
+n <- sapply(box, length)
+n
+
+grandmed <- median(unlist(box))
+grandmed
+
+Og <- sapply(box, function(x) { sum(x > grandmed) } )
+Oleq <- n - Og
+O <- rbind(Og, Oleq)
+rownames(O) <- c("> Med", "<= Med")
+O
+
+a <- sum(Og)
+b <- sum(Oleq)
+N <- sum(n)
+  # formula way
+t <- (N^2 / (a*b)) * sum((Og - n*a/N)^2/n)
+t
+  # trying chisq way
+E <- outer(c(a,b), n/N)
+t <- sum((O-E)^2/E)
+t
+
+df <- length(box) - 1
+
+pchisq(t, df, lower.tail = FALSE)
+```
+With a p-value of ~0.1116 we fail to reject the null hypothesis at the 5% significance level, and conclude that all boxes have the same median compression strength
+
+
+### b.) Software Library
+```{r}
+source("/Users/mahn/Desktop/STAT 3504/Notes/3. Contingency Tables/median.test.R")
+median.test(box)
+```
+With a p-value of ~0.1116 we fail to reject the null hypothesis at the 5% level, and conclude that all boxes have the same median compression strength
+
+
+
+## Problem 4: Stock Performance
+
+
+### a.) By Hand
+```{r}
+n <- c(30, 30, 30)
+Og <- c(18, 17, 10)
+Oleq <- 30 - Og
+O <- rbind(Og, Oleq)
+
+a <- sum(Og)
+b <- sum(Oleq)
+N <- sum(n)
+  # formula way
+t <- (N^2 / (a*b)) * sum((Og - n*a/N)^2/n)
+t
+  # trying chisq way
+E <- outer(c(a,b), n/N)
+t <- sum((O-E)^2/E)
+t
+
+df <- 3 - 1
+
+pchisq(t, df, lower.tail = FALSE)
+```
+With a p-value of ~0.07939 we fail to reject the null hypothesis under a 5% significance level, and conclude that the median is the same for all stock performances
+
+
+### b.) Software Library
+```{r}
+stock <- list(
+  newyork = c(rep(1, 18), rep(0, 12)),
+  american = c(rep(1, 17), rep(0, 13)),
+  nasdaq = c(rep(1, 10), rep(0, 20)))
+
+median.test(stock)
+```
+With a p-value of ~0.07939 we fail to reject the null hypothesis under a 5% significance level, and conclude that the median is the same for all stock performances
+
+
+## Problem 5: Chromosomal Structure
+
+
+### a.) By Hand
+```{r}
+# COMPUTE THE FOLLOWING:
+
+# i.) T
+O <- rbind(
+  c(54, 72, 83, 96),
+  c(20, 6, 18, 6),
+  c(17, 3, 12, 0),
+  c(0, 12, 14, 1),
+  c(0, 10, 0, 0))
+colnames(O) <- c("Texas", "New Mexico", "Arizona", "California")
+rownames(O) <- c("A", "B", "C", "D", "E")
+
+r <- rowSums(O)
+c <- colSums(O)
+N <- sum(r)
+tab <- rbind(O, c)
+tab <- cbind(tab, c(r,N))
+colnames(tab)[ncol(tab)] <- rownames(tab)[nrow(tab)] <- "tot"
+E <- outer(r, c/N)
+t <- sum((O-E)^2/E)
+
+t
+```
+t = 100.913
+
+```{r}
+# ii.) R1
+r1 <- t/(N*(min(length(r),length(c))-1))
+r1
+```
+r1 = 0.07933409
+
+```{r}
+# iii.) Cramer's Contingency Coefficient
+Ccc <- sqrt(r1)
+Ccc
+```
+ccc = 0.2816631
+
+```{r}
+# iv.) Pearson's Contingency Coefficient
+r2 <- sqrt(t/(N+t))
+r2
+```
+r2 = 0.4384598
+
+```{r}
+# v.) Pearson's Mean-Square Contingency Coefficient
+r3 <- t/N
+r3
+```
+r3 = 0.2380023
+
+
+### b.) Software Library
+```{r}
+library(vcd, quietly=TRUE)
+assocstats(O)
+```
+Gives us the very similar results...  
+T = 100.91, Cramer's = 0.282, Contingency Coeff(Pearson's) = 0.438  
+Does not give us the phi-coefficient, in which we can get by giving the function a 2x2 table by eliminating some rows and columns of the original table for example:
+```{r}
+Ord <- O[1:2,1:2]
+assocstats(Ord)
+```
+Which gives 0.257, close but different given we deleted some rows and columns  
+
+
+
+## Problem 6: Rolling Dice
+
+
+### a.) By Hand
+```{r}
+pstar <- c(rep(1/6, 6))
+O <- c(87, 96, 108, 89, 122, 98)
+N <- sum(O)
+
+E <- pstar*N
+
+t <- sum((O - E)^2/E)
+df <- length(O) - 1
+
+pchisq(t, df, lower.tail=FALSE)
+```
+With a p-value of ~0.127 we fail to reject the null hypothesis under 5% significance level, and conclude that the dice is balanced
+
+
+### b.) Software Library
+```{r}
+chisq.test(O, p=pstar)
+```
+With a p-value of ~0.127 we fail to reject the null hypothesis under 5% significance level, and conclude that the dice is balanced
+
+
+
+## Problem 7: Power of Tests
+
+
+### a.) Which test are you using?
+```{r}
+X <- rbind(
+  c(1, 1, 1),
+  c(1, 1, 1),
+  c(1, 0, 1),
+  c(0, 1, 1), 
+  c(0, 0, 1),
+  c(0, 1, 0),
+  c(1, 0, 0),
+  c(0, 0, 0))
+
+R <- rowSums(X)
+C <- colSums(X)
+N <- sum(R)
+tab <- rbind(X, C)
+tab <- cbind(tab, c(R, N))
+rownames(tab)[nrow(tab)] <- colnames(tab)[ncol(tab)] <- "tot"
+
+t <- length(C)*(length(C)-1)*(sum((C - N/length(C))^2))/sum(R*(length(C)- R))
+
+pchisq(t, length(C)-1, lower.tail=FALSE)
+```
+With a p-value of ~0.8187 we fail to reject the null hypothesis under a 5% significance level, and conclude that the tests are all the same (no difference in power)
+
+
+### b.) Software Library
+```{r}
+source("/Users/mahn/Desktop/STAT 3504/Notes/3. Contingency Tables/cochran.test.R")
+cochran.test(X)
+```
+With a p-value of ~0.8187 we fail to reject the null hypothesis under a 5% significance level, and conclude that the tests are all the same (no difference in power)
+
+
+
+
+

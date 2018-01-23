@@ -1,0 +1,269 @@
+---
+title: "Homework 2"
+author: "Michael Ahn"
+date: "September 23, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1: Insects
+
+### a.) By Hand
+  Characteristic A supposedly has a 0.2 probability of appearing in insects. We have 18 insects, 0 of which contain characteristic A.
+  H0: p = 0.2  
+  H1: p ~= 0.2  
+  We thus have the following...
+```{r}
+p <- 0.2
+n <- 18
+t <- 0
+```
+ 
+  Since t < n*p we use the rhs for a two-tailed test
+```{r}
+rhs <- seq(ceiling(n*p), n)
+tU <- sum(dbinom(rhs, n, p) <= dbinom(t, n, p))
+  # use tU value to find p-value
+phi <- pbinom(t, n, p) + pbinom(n - tU, n, p, lower.tail = FALSE)
+phi.approx <- 2*pbinom(t, n, p)
+c(phi, phi.approx)
+```
+  with a p-value of ~0.034, we reject the null hypothesis and conclude that the probability is different
+
+### b.) Using Software Library
+```{r insect}
+binom.test(t, n, p)
+```  
+  with a p-value of 0.03429, we come to the same conclusion using the software library function
+
+## Problem 2: Dice
+
+### a.) By Hand
+Dice is thrown 180 times, 'seven' is rolled 38 times. Probability of 'seven' is is p = 1/6 for fair dice.  
+H0: p = 1/6  
+H1: p > 1/6
+
+Since 38 is greater than 180/6, we assert the alternative hypothesis that the probability is greater than 1/6...
+```{r}
+n <- 180
+t <- 38
+p <- 1/6
+
+1 - pbinom(t-1, n,p)
+```
+Assuming a significance level of 0.05, we cannot reject the null hypothesis, and must conclude that the dice is still fair
+
+### b.) Using Software Library
+```{r}
+binom.test(t, n, p, alternative = "greater")
+```
+Again, if we go by a significance level of 0.05, given a p value of .6997, we cannot reject the null hypothesis. This p-value stands for our confidence or probability that the data supports the null hypothesis, and it is not below the rejection level.
+
+## Problem 3: Weight
+
+### 1. Testing the Hypothesis (weight = 103)
+Given the data, we check whether the median weight is really 103  
+H0: weight = 103  
+H1: weight ~= 103  
+
+#### a.) By Hand
+If we try to test this hypothesis by finding a 90% confidence interval...
+```{r}
+weight <- c(142, 134, 98, 119, 131, 103, 154, 122, 93, 137, 86, 119, 161, 144, 158, 165, 81, 117, 128, 103)
+
+alpha <- 0.05
+n <- length(weight)
+p <- 0.5
+
+r <- qbinom(alpha/2, n, p)
+s <- qbinom(1 - alpha/2, n, p)
+weight.sorted <- sort(weight)
+
+c(weight.sorted[r], weight.sorted[s])
+```
+This gives us the approximated confidence interval.
+```{r}
+alpha1 <- pbinom(r-1, n, p)
+alpha2 <- 1 - pbinom(s-1, n, p)
+1 - alpha1 - alpha2
+```
+We are actually only 92% confident that the median falls in the interval [103, 137] so we do not reject the null hypothesis.
+Anther approximation...
+
+```{r}
+t <- 103
+p <- 0.5
+n <- length(weight)
+
+t1 <- n - sum(weight > t)
+t2 <- n - sum(weight >= t)
+
+phi <- 2*min(pbinom(t1, n, p), 1 - pbinom(t2-1, n, p))
+phi
+```
+Cannot reject null hypothesis using a 95% significance.
+
+#### b.) Software Library  
+```{r}
+binom.test(t1,n,p)
+binom.test(t2,n,p)
+```
+The binom.test gives us a pvalue of ~0.11 which is still not enough to reject the null hypothesis given a 95% confidence, or even a 90%.
+
+### 2. Testing Hypothesis by 3rd Decile <= 100
+H0: decile.3 <= 100
+H1: decile.3 > 100
+
+#### a.) By Hand
+
+```{r}
+p <- 0.1
+x <- 100
+n <- length(weight)
+t1 <- sum(weight <= x)
+
+phi <- pbinom(t1, n, p)
+phi
+```
+We actually get a very large p value asserting that the data supports our null hypothesis. We cannot reject it, using a 5% significance.
+
+#### b.) Software Library
+```{r}
+binom.test(t1, n, p, "less")
+```
+We get a very close answer using the binom.test library function to our hand calculation using pbinom.  
+Cannot reject the null hypothesis
+
+
+## 4. Problem 4: Headroom
+H0: 95th percentile = 70.3 inches
+H1: 95th percentile ~= 70.3 inches
+```{r}
+heights <- c(72.6, 70.0, 71.3, 70.5, 70.8, 76.0, 70.1, 72.5, 71.1, 70.6, 71.9, 72.8)
+```
+
+### a.) By Hand
+```{r}
+t <- 70.3
+p <- 0.95
+n <- 100
+
+t1 <- 100 - sum(heights > t)
+t2 <- 100 - sum(heights >= t)
+
+phi <- 2*min(pbinom(t1, n, p), 1 - pbinom(t2-1, n, p))
+phi
+```
+Based on our approximation, we cannot reject the null hypothesis given a 5% significance level.
+
+### b.) Software Library
+```{r}
+binom.test(t1, n, p, "two.sided")
+binom.test(t2, n, p)
+```
+When we use the software library though, we fall within the 0.05 level and can reject the null hypothesis. 
+
+
+## Problem 5: Tolerance Limits
+Get the in class functions
+```{r}
+# translates from P( x^(r) <= at least q proportion of pop <= x^(r+m-1) ) <= alpha
+bintol <- function(n, r, m, q)
+  {
+    i <- 0:(r+m-1)
+    sum(choose(n, i) * (1-q)^i * q^(n-i))
+  }
+
+# Solves summation exactly
+solve.bintol.n <- function(level, r, m, q)
+  {
+    ## convert from level to alpha
+    alpha <- 1-level
+
+    n <- 1
+    while(1) {
+        p <- bintol(n, r, m, q)
+        if(p < alpha) break ## we crossed the threshold
+        else n <- n+1
+    }
+
+    return(n)
+  }
+
+# Solves approximation by algebra
+approx.bintol.n <- function(level, r, m, q)
+  {
+    x1ma <- qchisq(level, 2*(r+m))
+    (1/4)*x1ma*(1+q)/(1-q) + (1/2)*(r+m-1)
+}
+
+solve.bintol.q <- function(level, n, r, m)
+  {
+    alpha <- 1-level
+    f <- function(q, alpha, n, r, m) {
+        alpha - bintol(n, r, m, q)
+    }
+    out <- uniroot(f, c(0,1), alpha=alpha, n=n, r=r, m=m)
+    return(out$root)
+}
+
+approx.bintol.q <- function(level, n, r, m)
+  {
+      x1ma <- qchisq(level, 2*(r+m))
+      temp <- 4*n - 2*(r+m-1)
+      (temp - x1ma)/(temp + x1ma)
+  }
+```
+
+### a.) Find sample size to be 90% confident that 95% of population will be within the range
+
+#### i. Exactly
+```{r}
+r <- m <- 1
+p <- 0.9
+q <- 0.95
+ans <- solve.bintol.n(0.9, 1, 1, 0.95)
+ans
+```
+
+#### ii. Approximately
+```{r}
+approx.bintol.n(0.9, 1, 1, 0.95)
+```
+Which would be 76 if we rounded, or round up to 77 if we had the insight to be 'at least' 90% sure.
+
+### b.) A fitness gym has measured the percentage of fat in 86 of its members.
+```{r}
+n <- 86
+```
+
+#### i. percentage between smallest and largest with 95% certainty
+```{r}
+r <- m <- 1
+n <- 86
+p <- 0.95
+
+solve.bintol.q(p, n, r, m)
+```
+
+#### ii. what percentage between X(2) and X(85) with 95% certainty?
+```{r}
+r <- m <- 2
+p <- 0.96
+n <- 86
+approx.bintol.q(p, n, r, m)
+```
+
+### c.) at least 90% of rods in a load are sixth longest/shortest with 99% confidence. Sample Size?
+```{r}
+r <- m <- 6
+p <- 0.99
+q <- 0.9
+solve.bintol.n(p, r, n, q)
+```
+

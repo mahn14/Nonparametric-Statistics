@@ -1,0 +1,276 @@
+---
+title: "Homework 6"
+author: "Michael Ahn"
+date: "November 12, 2017"
+output:
+html_document:
+  -smart
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Problem 1: Temperature Revisited
+```{r}
+desmoines <- c(83, 91, 94, 89, 89, 96, 91, 92, 90)
+spokane <- c(78, 82, 81, 77, 79, 81, 80, 81)
+```
+
+### a.) By Hand
+H0: desmoines and spokane are identically distributed except diff means and Var(desmoines) >= Var(spokane)  
+H1: var(desmoines) < var(spokane)  
+```{r}
+x <- desmoines
+y <- spokane
+xbar <- mean(desmoines)
+ybar <- mean(spokane)
+u <- abs(x - xbar)
+v <- abs(y - ybar)
+
+r <- rank(c(u, v))
+r
+ru <- r[seq_along(u)]
+rv <- r[-seq_along(u)]
+t <- sum(ru^2)
+t
+
+nx <- length(x)
+ny <- length(y)
+N <- nx + ny
+r2bar <- (sum(ru^2) + sum(rv^2))/N
+r4sum <- sum(r^4)
+t1 <- (t - nx*r2bar)/sqrt(nx*ny/(N*(N-1))*r4sum - nx*ny/(N-1)*r2bar^2)
+t1 
+
+pnorm(t1, lower.tail=FALSE)
+```
+ranking, r: 17.0  2.5 15.0 10.5 10.5 16.0  2.5  9.0  4.0 12.0 13.0  7.0 14.0  5.0  7.0    1.0 7.0  
+The test statistic is 0.8144833  
+With a p-value of 0.2076841, we fail to reject the null hypothesis at a 5% significance level and conclude that the level of variability in the distributions of temperatures are equivalent  
+
+
+### b.) Software Library
+```{r}
+#source("/Users/mahn/Desktop/School/STAT 3504/Functions/sqranks.R")
+sqranks.test.approx <- function(x, y, alternative=c("two.sided", "greater", "less"))
+{
+  ## check for partial matches of the alternative argument
+  alternative <- match.arg(alternative)
+  
+  ## calculate the absolute discrepancies from the (estimated) mean
+  xbar <- mean(x)
+  ybar <- mean(y)
+  u <- abs(x - xbar)
+  v <- abs(y - ybar)
+  
+  ## calculate the observed ranks, and t
+  r <- rank(c(u, v))
+  ru <- r[seq_along(u)]
+  rv <- r[-seq_along(u)]
+  t <- sum(ru^2)
+  
+  ## calculate the standardized version, t1
+  nx <- length(x)
+  ny <- length(y)
+  N <- nx + ny
+  r2bar <- (sum(ru^2) + sum(rv^2))/N
+  r4sum <- sum(r^4)
+  t1 <- (t - nx*r2bar)/sqrt(nx*ny/(N*(N-1))*r4sum - nx*ny/(N-1)*r2bar^2)
+  
+  ## calculate the p-value
+  if(alternative == "two.sided") 
+    phi <- 2*pnorm(-abs(t1))
+  else if(alternative == "less")
+    phi <- pnorm(t1)
+  else if(alternative == "greater")
+    phi <- pnorm(t1, lower.tail=FALSE)
+  
+  ## return the stats and p-value
+  return(list(t=t, t1=t1, p.value=phi))
+}
+sqranks.test.approx(desmoines, spokane, "greater")
+```
+Same results. With a p-value of 0.2076841, we fail to reject the null hypothesis at a 5% significance level and conclude that the level of variability in the distributions of temperatures are equivalent.  
+
+
+
+## Problem 2: Room Temperature Revisited
+```{r}
+men <- c(74, 72, 77, 76, 76, 73, 75, 73, 74, 75)
+women <- c(75, 77, 78, 79, 77, 73, 78, 79, 78, 80)
+```
+
+### a.) By Hand
+H0: men and women are identically distributed, possibly different means  
+H1: the variance are not equal  
+```{r}
+x <- men
+y <- women
+xbar <- mean(x)
+ybar <- mean(y)
+u <- abs(x - xbar)
+v <- abs(y - ybar)
+r <- rank(c(u, v))
+r #rank
+ru <- r[seq_along(u)]
+rv <- r[-seq_along(u)]
+t <- sum(ru^2)
+t #observed t
+nx <- length(x)
+ny <- length(y)
+N <- nx + ny
+r2bar <- (sum(ru^2) + sum(rv^2))/N
+r4sum <- sum(r^4)
+t1 <- (t - nx*r2bar)/sqrt(nx*ny/(N*(N-1))*r4sum - nx*ny/(N-1)*r2bar^2) 
+t1 #standardized t
+2*pnorm(-abs(t1))
+```
+ranking, r: 4.5 17.5 17.5 11.5 11.5 11.5  4.5 11.5  4.5  4.5 16.0  1.5  8.0 14.5  1.5 20.0   8.0 14.5  8.0 19.0  
+test statistic: -0.7229738  
+With a p-value of 0.469696, we fail to reject the null hypothesis and conclude that the variance among men and women are equal  
+
+### b.) Software Library
+```{r}
+sqranks.test.approx(men, women, "two.sided")
+```
+Same results. With a p-value of 0.469696, we fail to reject the null hypothesis and conclude that the variance among men and women are equal  
+
+
+
+## Problem 3: Rubber
+```{r}
+c20 <- c(2.07, 2.14, 2.22, 2.03, 2.21, 2.03, 2.05, 2.18, 2.09, 2.14, 2.11, 2.02)
+c45 <- c(2.52, 2.15, 2.49, 2.03, 2.37, 2.05, 1.99, 2.42, 2.08, 2.42, 2.29, 2.01)
+```
+
+### a.) Numerical Summaries
+```{r}
+summary(c20)
+```
+
+```{r}
+summary(c45)
+```
+We can see the quartiles, min, max, and means of the two samples  
+
+### b.) Helpful Plot
+```{r}
+boxplot(c20, c45, names = c("c20", "c45"), xlab = "curing temp", ylab = "tensile strength")
+```
+We can see that the variability in c45 seems to be relatively much higher than for c20. Furthermore, the median for c45 seems to be close to the 3rd quartile for the c20 sample. The min and lower quartile are closer to one another, but the upper quartile for c45 is much higher; this implies that the mean for c45 will be higher than for c20, too.  
+
+### c.) Two Sided Test comparing the mean
+H0: the means for both temps are equal  
+H1: the means are different  
+```{r}
+nx <- length(c20)
+ny <- length(c45)
+r <- rank(c(c20, c45))
+r
+rx <- r[seq_along(c20)]
+t <- sum(rx) 
+t
+ties <- length(r) - length(unique(r))
+ties
+N <- nx + ny
+r2sum <- sum(r^2)
+r2sum
+t1 <- t - nx*(N+1)/2
+t1 <- t1/sqrt(nx*ny/((N*(N-1)))*r2sum - nx*ny*(N+1)^2/(4*(N-1)))
+t1
+2*min(pnorm(t1), pnorm(t1, lower.tail=FALSE))
+```
+With t = 130.5, and t1 = -1.12755  
+With a p-value of 0.2595099, we fail to reject the null hypothesis at a 5% significance level and conclude that the means for both temperatures are the same  
+
+#### d.) Two Sided Test comparing the variance
+H0: the temps are identically distributed, potentially different means  
+H1: the variances are different  
+```{r}
+sqranks.test.approx(c20, c45, "two.sided")
+```
+With an observed t = 857, and standardized t = -3.575  
+With a p-value of 0.00035 we reject the null hypothesis at a 5% significance level and conclude that the variances between the two temperatures are different in their tensile strengths  
+
+
+
+## Problem 4: Light Bulb Revisitted
+```{r}
+bulbs <- list(
+    A=c(73, 64, 67, 62, 70), 
+    B=c(84, 80, 81, 77),
+    C=c(82, 79, 71, 75))
+```
+Can we conclude that the variability is all equal?  
+H0: the three samples are identically distributed, possibly different means  
+H1: there is at least one sample if a variance greater than another  
+```{r}
+sqranks.2plus.test <- function(xlist)
+ {
+    ## extract dimensions
+    k <- length(xlist)
+    n <- sapply(xlist, length)
+    N <- sum(n)
+
+    ## calculate absolute deviations from (estimated) mean and then rank them
+    U <- lapply(xlist, function(x) { abs(x - mean(x)) })
+    r <- rank(unlist(U))
+
+    ## calculate s 
+    g <- factor(rep.int(seq_len(k), n))
+    s <- tapply(r, g, function(x) { sum(x^2) })
+
+    ## calculate t2 via auxiliary quantities
+    sbar <- sum(s)/N
+    d2 <- (sum(r^4) - N*sbar^2)/(N-1)
+    t2 <- (sum(s^2/n) - N*sbar^2)/d2
+
+    ## finish with p-value
+    phi <- pchisq(t2, k-1, lower.tail=FALSE)
+
+    return(list(tstat=t2, p.value=phi))
+}
+
+sqranks.2plus.test(bulbs)
+```
+With a t-statitics of 1.055849 and p-value of 0.589828, we fail to reject the null hypothesis at a 5% significance level and conclude that the variance is equivalent for all the three bulb types.  
+
+
+
+## Problem 5: Investments
+```{r}
+invest <- list(bonds=c(146, 180, 192, 185, 153),
+    bluechip=c(176, 110, 212, 108, 196),
+    speculative=c(-540, 1052, 642, -281, 67))
+
+sqranks.2plus.test(invest)
+```
+H0: variability is identical  
+H1: at least one of the variances among the 3 is not equal  
+With a t-stat of 11.70985 and a p-value of 0.002865751, we reject the null hypothesis at the 5% significance level and conclude that the variance is significant for at least one of the investments  
+
+
+
+## Problem 6: Couples' Bowling
+```{r}
+bowling <- data.frame(husband=c(147, 158, 131, 142, 183, 151, 196, 129, 155, 158),
+    wife=c(122, 128, 125, 123, 115, 120, 108, 143, 124, 123))
+```
+
+### a.) Compute rho
+```{r}
+rho <- cor(rank(bowling$husband), rank(bowling$wife))
+rho
+```
+rho = -0.6128049  
+
+### b.) Two Tailed test for independence
+H0: husband and wife scores are mutually independent  
+H1: there tends to be a correlation relationship between small/large husband or small/large wife scores  
+```{r}
+cor.test(bowling$husband, bowling$wife, alternative="two.sided", method="spearman")
+```
+With a p-value of 0.05961 we fail to reject the null hypothesis at a 5% significance level and conclude that the scores are mutually independent (though it is very close)  
+
